@@ -6,15 +6,21 @@ import { getTranslation } from '../utils/translations';
 interface HeaderProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
+  onLogoClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ language, onLanguageChange }) => {
+const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, onLogoClick }) => {
   const t = getTranslation(language);
 
   return (
     <header className="border-b border-gray-800 bg-[#0f172a]/80 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-3 group cursor-pointer">
+        <div 
+          className="flex items-center gap-3 group cursor-pointer" 
+          onClick={onLogoClick}
+          role="button"
+          tabIndex={0}
+        >
           <div className="relative">
             <div className="absolute inset-0 bg-cyan-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <Hexagon className="relative w-8 h-8 text-cyan-400 fill-cyan-400/10 stroke-[1.5]" />

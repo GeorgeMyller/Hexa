@@ -48,7 +48,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0b1121] selection:bg-cyan-500/30 text-gray-200">
-      <Header language={language} onLanguageChange={setLanguage} />
+      <Header 
+        language={language} 
+        onLanguageChange={setLanguage} 
+        onLogoClick={handleReset}
+      />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
