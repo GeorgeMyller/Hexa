@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import LandingHero from './components/LandingHero';
 import InputForm from './components/InputForm';
 import ReportView from './components/ReportView';
+import ApiKeyModal from './components/ApiKeyModal';
+import HistoryDrawer from './components/HistoryDrawer';
 import { AnalysisStatus, EvaluationReport, InputData, Language } from './types';
 import { analyzeRepository } from './services/geminiService';
+import { saveReportToHistory, getHistory, deleteReportFromHistory } from './services/historyService';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { getTranslation } from './utils/translations';
+
+const STORAGE_KEY = 'hexa_api_key';
 
 const App: React.FC = () => {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -14,8 +19,66 @@ const App: React.FC = () => {
   const [report, setReport] = useState<EvaluationReport | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [language, setLanguage] = useState<Language>('en');
+  
+  // API Key State
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [manualKey, setManualKey] = useState<string | null>(null);
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+
+  // History State
+  const [history, setHistory] = useState<EvaluationReport[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const t = getTranslation(language);
+
+  // Check for API Key on mount (both environment and local storage)
+  useEffect(() => {
+    const checkKey = async () => {
+      // 1. Check LocalStorage
+      const storedKey = localStorage.getItem(STORAGE_KEY);
+      if (storedKey) {
+        setManualKey(storedKey);
+        setHasApiKey(true);
+      }
+      // 2. Load History
+      setHistory(getHistory());
+
+      // 3. Check AI Studio Environment (Fallback)
+      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(hasKey);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleConnectApi = async () => {
+    // Priority 1: AI Studio Dialog
+    if (window.aistudio && window.aistudio.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        setHasApiKey(true);
+      } catch (error) {
+        console.error("Failed to select API key", error);
+      }
+    } else {
+      // Priority 2: Open Manual Modal if AI Studio not available
+      setIsKeyModalOpen(true);
+    }
+  };
+
+  const handleSaveKey = (key: string) => {
+    localStorage.setItem(STORAGE_KEY, key);
+    setManualKey(key);
+    setHasApiKey(true);
+  };
+
+  const handleRemoveKey = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setManualKey(null);
+    setHasApiKey(false);
+    setIsStarted(false);
+  };
 
   const handleAnalyze = async (data: InputData) => {
     setStatus(AnalysisStatus.ANALYZING);
@@ -23,13 +86,24 @@ const App: React.FC = () => {
     setReport(null);
 
     try {
-      const result = await analyzeRepository(data.repoUrl, data.codeSnippet, language);
+      const result = await analyzeRepository(data.repoUrl, data.codeSnippet, language, manualKey || undefined);
+      
+      // Auto-save to history
+      saveReportToHistory(result);
+      setHistory(getHistory()); // Refresh history state
+      
       setReport(result);
       setStatus(AnalysisStatus.COMPLETE);
     } catch (err: any) {
       console.error(err);
-      const message = err.message || t.error.default;
-      setErrorMsg(message);
+      if (err.message && (err.message.includes('Requested entity was not found') || err.message.includes('API Key'))) {
+        if (!manualKey) setHasApiKey(false);
+        setIsStarted(false);
+        setErrorMsg(t.error.default + " (API Key validation failed)");
+      } else {
+        const message = err.message || t.error.default;
+        setErrorMsg(message);
+      }
       setStatus(AnalysisStatus.ERROR);
     }
   };
@@ -46,19 +120,59 @@ const App: React.FC = () => {
     setErrorMsg(null);
   };
 
+  const handleLoadReport = (loadedReport: EvaluationReport) => {
+    setReport(loadedReport);
+    setStatus(AnalysisStatus.COMPLETE);
+    setIsStarted(true);
+  };
+
+  const handleDeleteReport = (id: string) => {
+    const updated = deleteReportFromHistory(id);
+    setHistory(updated);
+    // If deleted current report, reset
+    if (report && report.id === id) {
+      handleReset();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b1121] selection:bg-cyan-500/30 text-gray-200">
       <Header 
         language={language} 
         onLanguageChange={setLanguage} 
         onLogoClick={handleReset}
+        onOpenSettings={() => setIsKeyModalOpen(true)}
+        onToggleHistory={() => setIsHistoryOpen(true)}
+        hasStoredKey={!!manualKey}
+      />
+
+      <ApiKeyModal 
+        isOpen={isKeyModalOpen}
+        onClose={() => setIsKeyModalOpen(false)}
+        onSave={handleSaveKey}
+        onRemove={handleRemoveKey}
+        currentKey={manualKey}
+        language={language}
+      />
+
+      <HistoryDrawer 
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        onSelectReport={handleLoadReport}
+        onDeleteReport={handleDeleteReport}
       />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* State 0: Landing Page */}
         {!isStarted && status === AnalysisStatus.IDLE && (
-          <LandingHero language={language} onStart={() => setIsStarted(true)} />
+          <LandingHero 
+            language={language} 
+            onStart={() => setIsStarted(true)} 
+            hasApiKey={hasApiKey}
+            onConnectApi={handleConnectApi}
+          />
         )}
 
         {/* State 1: Input Configuration */}

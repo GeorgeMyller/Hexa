@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EvaluationReport, AgentEvaluation, Language } from '../types';
 import { getTranslation } from '../utils/translations';
+import ReactMarkdown from 'react-markdown';
+import HexaRadarChart from './HexaRadarChart';
 import { 
   Shield, 
   Layout, 
@@ -15,7 +17,10 @@ import {
   TrendingUp,
   Clock,
   AlertTriangle,
-  Hexagon
+  Hexagon,
+  Download,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface ReportViewProps {
@@ -63,9 +68,9 @@ const AgentCard: React.FC<{ agent: AgentEvaluation }> = ({ agent }) => {
       </div>
       
       <div className="p-6 space-y-6 flex-grow">
-        <p className="text-gray-300 text-sm leading-relaxed italic border-l-2 border-cyan-500/30 pl-4">
-          "{agent.summary}"
-        </p>
+        <div className="text-gray-300 text-sm leading-relaxed italic border-l-2 border-cyan-500/30 pl-4">
+           <ReactMarkdown>{agent.summary}</ReactMarkdown>
+        </div>
         
         <div className="space-y-3">
           <h4 className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
@@ -76,7 +81,9 @@ const AgentCard: React.FC<{ agent: AgentEvaluation }> = ({ agent }) => {
             {agent.findings.map((finding, idx) => (
               <li key={idx} className="flex gap-2 text-sm text-gray-400 items-start">
                 <span className="mt-1.5 w-1 h-1 rounded-full bg-red-400 flex-shrink-0" />
-                <span>{finding}</span>
+                <div className="markdown-content">
+                  <ReactMarkdown>{finding}</ReactMarkdown>
+                </div>
               </li>
             ))}
           </ul>
@@ -91,7 +98,9 @@ const AgentCard: React.FC<{ agent: AgentEvaluation }> = ({ agent }) => {
             {agent.suggestions.map((suggestion, idx) => (
               <li key={idx} className="flex gap-2 text-sm text-gray-400 items-start">
                 <span className="mt-1.5 w-1 h-1 rounded-full bg-yellow-400 flex-shrink-0" />
-                <span>{suggestion}</span>
+                <div className="markdown-content">
+                   <ReactMarkdown>{suggestion}</ReactMarkdown>
+                </div>
               </li>
             ))}
           </ul>
@@ -103,9 +112,58 @@ const AgentCard: React.FC<{ agent: AgentEvaluation }> = ({ agent }) => {
 
 const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) => {
   const t = getTranslation(language);
+  const [copied, setCopied] = useState(false);
+
+  const handleDownload = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `HEXA_REPORT_${report.repoName.replace(/\//g, '_')}_${report.timestamp}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleCopyMarkdown = () => {
+    let md = `# HEXA REPORT: ${report.repoName}\n\n`;
+    md += `**Score:** ${report.overallScore}/100\n`;
+    md += `**Date:** ${new Date(report.timestamp).toLocaleString()}\n\n`;
+    md += `## Executive Summary\n${report.executiveSummary}\n\n`;
+    md += `## Roadmap\n${report.roadmap.map(x => `- ${x}`).join('\n')}\n\n`;
+    md += `## Agent Details\n`;
+    report.agents.forEach(a => {
+      md += `### ${a.role} (${a.score}/100)\n${a.summary}\n`;
+      a.findings.forEach(f => md += `- [Finding] ${f}\n`);
+      a.suggestions.forEach(s => md += `- [Suggestion] ${s}\n`);
+      md += `\n`;
+    });
+    
+    navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      
+      {/* Action Bar */}
+      <div className="flex justify-end gap-3 px-2">
+        <button 
+          onClick={handleCopyMarkdown}
+          className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] hover:bg-[#1e293b] border border-gray-700 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all"
+        >
+          {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+          Copy Markdown
+        </button>
+        <button 
+          onClick={handleDownload}
+          className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] hover:bg-[#1e293b] border border-gray-700 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all"
+        >
+          <Download className="w-4 h-4" />
+          Download JSON
+        </button>
+      </div>
+
       {/* Executive Summary Card */}
       <div className="bg-[#131b2e] border border-cyan-900/30 rounded-2xl p-8 md:p-10 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-3 opacity-5">
@@ -113,8 +171,9 @@ const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) =>
         </div>
         
         <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-10">
-            <div>
+          <div className="flex flex-col xl:flex-row gap-12 mb-10">
+            {/* Left Column: Info */}
+            <div className="flex-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-bold uppercase tracking-widest border border-cyan-500/20 mb-4">
                 <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
                 {t.report.metaTitle}
@@ -122,31 +181,39 @@ const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) =>
               <h2 className="text-4xl font-black text-white mb-2 tracking-tight">
                 {report.repoName || 'Unnamed Repository'}
               </h2>
-              <p className="text-gray-400 text-sm font-mono">ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+              <p className="text-gray-400 text-sm font-mono mb-8">ID: {report.id.slice(0, 8).toUpperCase()}</p>
+              
+              <div className="bg-gradient-to-r from-gray-900/80 to-gray-900/40 rounded-xl p-8 border-l-4 border-cyan-500 backdrop-blur-sm">
+                <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-4">{t.report.execSummary}</h3>
+                <div className="text-gray-200 leading-loose text-lg font-light markdown-content">
+                  <ReactMarkdown>{report.executiveSummary}</ReactMarkdown>
+                </div>
+              </div>
             </div>
             
-            <div className="flex flex-col items-center justify-center bg-[#0b1121] p-6 rounded-2xl border border-gray-800 min-w-[200px]">
-              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t.report.health}</span>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-6xl font-black ${getScoreColor(report.overallScore)}`}>
-                  {report.overallScore}
-                </span>
-                <span className="text-gray-600 font-bold text-lg">/100</span>
+            {/* Right Column: Visuals & Score */}
+            <div className="flex flex-col items-center justify-start gap-8 min-w-[300px]">
+               <div className="flex flex-col items-center justify-center bg-[#0b1121] p-6 rounded-2xl border border-gray-800 w-full">
+                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">{t.report.health}</span>
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-6xl font-black ${getScoreColor(report.overallScore)}`}>
+                    {report.overallScore}
+                  </span>
+                  <span className="text-gray-600 font-bold text-lg">/100</span>
+                </div>
+                <div className="w-full h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
+                  <div 
+                    className={`h-full ${getScoreBg(report.overallScore)} transition-all duration-1000`} 
+                    style={{ width: `${report.overallScore}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
-                <div 
-                  className={`h-full ${getScoreBg(report.overallScore)} transition-all duration-1000`} 
-                  style={{ width: `${report.overallScore}%` }}
-                />
+
+              {/* Radar Chart */}
+              <div className="bg-[#0b1121] rounded-2xl border border-gray-800 p-2 w-full flex justify-center">
+                 <HexaRadarChart agents={report.agents} />
               </div>
             </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-gray-900/80 to-gray-900/40 rounded-xl p-8 border-l-4 border-cyan-500 mb-8 backdrop-blur-sm">
-            <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-4">{t.report.execSummary}</h3>
-            <p className="text-gray-200 leading-loose text-lg font-light">
-              {report.executiveSummary}
-            </p>
           </div>
 
           {/* Strategic Overview Grid */}
@@ -161,7 +228,9 @@ const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) =>
                 {report.quickWins?.map((item, idx) => (
                   <li key={idx} className="flex gap-3 text-sm text-gray-300 items-start">
                     <CheckCircle className="w-4 h-4 text-green-500/50 flex-shrink-0 mt-0.5" />
-                    <span className="leading-snug">{item}</span>
+                    <span className="leading-snug">
+                      <ReactMarkdown>{item}</ReactMarkdown>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -177,7 +246,9 @@ const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) =>
                 {report.criticalRisks?.map((item, idx) => (
                   <li key={idx} className="flex gap-3 text-sm text-gray-300 items-start">
                     <AlertOctagon className="w-4 h-4 text-red-500/50 flex-shrink-0 mt-0.5" />
-                    <span className="leading-snug">{item}</span>
+                    <span className="leading-snug">
+                      <ReactMarkdown>{item}</ReactMarkdown>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -193,7 +264,9 @@ const ReportView: React.FC<ReportViewProps> = ({ report, onReset, language }) =>
                 {report.roadmap?.map((item, idx) => (
                   <li key={idx} className="flex gap-3 text-sm text-gray-300 items-start">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                    <span className="leading-snug">{item}</span>
+                    <span className="leading-snug">
+                      <ReactMarkdown>{item}</ReactMarkdown>
+                    </span>
                   </li>
                 ))}
               </ul>

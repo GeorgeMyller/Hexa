@@ -1,14 +1,16 @@
 import React from 'react';
 import { Language } from '../types';
 import { getTranslation } from '../utils/translations';
-import { ArrowRight, Hexagon, Cpu, Shield, Search, FileText, Briefcase, Scale } from 'lucide-react';
+import { ArrowRight, Hexagon, Cpu, Shield, FileText, Briefcase, Scale, LogIn } from 'lucide-react';
 
 interface LandingHeroProps {
   language: Language;
   onStart: () => void;
+  hasApiKey: boolean;
+  onConnectApi: () => void;
 }
 
-const LandingHero: React.FC<LandingHeroProps> = ({ language, onStart }) => {
+const LandingHero: React.FC<LandingHeroProps> = ({ language, onStart, hasApiKey, onConnectApi }) => {
   const t = getTranslation(language);
 
   const agents = [
@@ -43,13 +45,23 @@ const LandingHero: React.FC<LandingHeroProps> = ({ language, onStart }) => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          <button 
-            onClick={onStart}
-            className="group relative px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-[#0f172a] font-bold rounded-lg transition-all transform hover:-translate-y-1 hover:shadow-[0_0_40px_-10px_rgba(34,211,238,0.5)] flex items-center gap-3"
-          >
-            {t.hero.deploy}
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          {hasApiKey ? (
+            <button 
+              onClick={onStart}
+              className="group relative px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-[#0f172a] font-bold rounded-lg transition-all transform hover:-translate-y-1 hover:shadow-[0_0_40px_-10px_rgba(34,211,238,0.5)] flex items-center gap-3"
+            >
+              {t.hero.deploy}
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          ) : (
+            <button 
+              onClick={onConnectApi}
+              className="group relative px-8 py-4 bg-[#0f172a] hover:bg-gray-900 text-white border border-gray-700 hover:border-cyan-500/50 font-bold rounded-lg transition-all transform hover:-translate-y-1 hover:shadow-lg flex items-center gap-3"
+            >
+              <LogIn className="w-5 h-5 text-cyan-400" />
+              {t.hero.connect}
+            </button>
+          )}
         </div>
 
         {/* Agent Grid */}

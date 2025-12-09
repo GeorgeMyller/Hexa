@@ -24,6 +24,8 @@ export interface GroundingLink {
 }
 
 export interface EvaluationReport {
+  id: string;
+  timestamp: number;
   repoName: string;
   overallScore: number;
   executiveSummary: string;

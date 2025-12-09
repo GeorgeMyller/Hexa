@@ -1,9 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { EvaluationReport, GroundingLink, Language } from "../types";
 import { InputGuard } from "./inputGuard";
-
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import { fetchRepoContext } from "./githubService";
 
 const SYSTEM_INSTRUCTION = `
 You are the "ADK Insight Core", the Lead Orchestrator of an automated software analysis system using the Google ADK framework.
@@ -25,9 +23,19 @@ If code is provided, analyze it deeply.
 export const analyzeRepository = async (
   repoUrl: string,
   codeSnippet: string,
-  language: Language
+  language: Language,
+  apiKey?: string
 ): Promise<EvaluationReport> => {
   try {
+    // Prioritize user-provided key, fall back to environment key
+    const effectiveKey = apiKey || process.env.API_KEY;
+    
+    if (!effectiveKey) {
+      throw new Error("No API Key provided. Please configure your API Key in settings.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey: effectiveKey });
+
     // --- SECURITY GUARDRAILS ---
     
     // 1. Validate Repo URL
@@ -44,6 +52,16 @@ export const analyzeRepository = async (
 
     // ---------------------------
 
+    // 3. Fetch GitHub Context (if applicable)
+    let githubContext = "";
+    if (repoUrl && repoUrl.includes("github.com")) {
+      try {
+        githubContext = await fetchRepoContext(repoUrl);
+      } catch (e) {
+        console.warn("Failed to fetch GitHub context, proceeding with limited info.", e);
+      }
+    }
+
     const langInstruction = language === 'pt' 
       ? "OUTPUT THE CONTENT IN BRAZILIAN PORTUGUESE (PT-BR)." 
       : "OUTPUT THE CONTENT IN ENGLISH.";
@@ -53,7 +71,11 @@ export const analyzeRepository = async (
     Repository URL: ${repoUrl || "Not provided"}
     
     Code/Context Provided:
-    ${codeSnippet ? codeSnippet : "No specific code provided, please analyze based on the repository name/URL using public knowledge."}
+    ${codeSnippet ? codeSnippet : ""}
+
+    ${githubContext}
+    
+    ${(!codeSnippet && !githubContext) ? "No specific code or GitHub context available. Please analyze based on the repository name/URL using public knowledge (Google Search)." : ""}
     
     Produce a COMPREHENSIVE REPORT delegating to the 6 modules.
     
@@ -135,7 +157,7 @@ export const analyzeRepository = async (
         cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
       }
 
-      const report = JSON.parse(cleanText) as EvaluationReport;
+      const reportData = JSON.parse(cleanText);
 
       // Extract grounding metadata (links) if available
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
@@ -146,7 +168,12 @@ export const analyzeRepository = async (
           uri: chunk.web.uri
         }));
       
-      report.links = links;
+      const report: EvaluationReport = {
+        ...reportData,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        links: links
+      };
 
       return report;
     } else {

@@ -14,6 +14,7 @@ export const translations = {
       highlight: "Instantly.",
       subtitle: "HEXA orchestrates six specialized autonomous agents to dissect your codebase. From Architecture to Legal Compliance, get a CTO-level audit in seconds.",
       deploy: "Deploy HEXA Agents",
+      connect: "Connect Google Account",
       demo: "View Live Demo",
       features: {
         instant: "Zero Setup",
@@ -76,6 +77,7 @@ export const translations = {
       highlight: "Instantâneo.",
       subtitle: "O HEXA orquestra seis agentes autônomos especializados para dissecar seu código. Da Arquitetura ao Jurídico, obtenha uma auditoria nível CTO em segundos.",
       deploy: "Implantar Agentes",
+      connect: "Conectar Conta Google",
       demo: "Ver Demo",
       features: {
         instant: "Zero Config",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Hexagon, Terminal, ShieldCheck, Globe } from 'lucide-react';
+import { Hexagon, Terminal, ShieldCheck, Globe, Key, Clock } from 'lucide-react';
 import { Language } from '../types';
 import { getTranslation } from '../utils/translations';
 
@@ -7,9 +7,19 @@ interface HeaderProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
   onLogoClick: () => void;
+  onOpenSettings: () => void;
+  onToggleHistory: () => void;
+  hasStoredKey: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, onLogoClick }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  language, 
+  onLanguageChange, 
+  onLogoClick, 
+  onOpenSettings,
+  onToggleHistory,
+  hasStoredKey
+}) => {
   const t = getTranslation(language);
 
   return (
@@ -32,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, onLogoClick
           </div>
         </div>
         
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 sm:gap-8">
           <div className="hidden md:flex items-center gap-6 text-xs font-semibold uppercase tracking-widest text-gray-500">
             <div className="flex items-center gap-2 hover:text-cyan-400 transition-colors cursor-default">
               <Terminal className="w-4 h-4" />
@@ -46,13 +56,35 @@ const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, onLogoClick
 
           <div className="h-8 w-px bg-gray-800 hidden md:block"></div>
 
-          <button 
-            onClick={() => onLanguageChange(language === 'en' ? 'pt' : 'en')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-cyan-500/50 transition-all text-xs font-bold text-gray-300 hover:text-white"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{language.toUpperCase()}</span>
-          </button>
+          <div className="flex items-center gap-3">
+             <button
+              onClick={onToggleHistory}
+              className="p-2 rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-900/10 transition-all"
+              title="View History"
+            >
+              <Clock className="w-4 h-4" />
+            </button>
+
+             <button
+              onClick={onOpenSettings}
+              className={`p-2 rounded-lg border transition-all ${
+                hasStoredKey 
+                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' 
+                  : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
+              }`}
+              title="API Key Settings"
+            >
+              <Key className="w-4 h-4" />
+            </button>
+
+            <button 
+              onClick={() => onLanguageChange(language === 'en' ? 'pt' : 'en')}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-cyan-500/50 transition-all text-xs font-bold text-gray-300 hover:text-white"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{language.toUpperCase()}</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
