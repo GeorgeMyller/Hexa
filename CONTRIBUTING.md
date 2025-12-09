@@ -1,4 +1,4 @@
-# Contributing to CodeCrew ADK Evaluator
+# Contributing to Hexa
 
 First off, thanks for taking the time to contribute!
 

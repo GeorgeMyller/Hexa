@@ -1,10 +1,7 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Avaliador ADK CodeCrew
+# Hexa
 
-O **Avaliador ADK CodeCrew** é uma ferramenta avançada baseada em IA projetada para analisar repositórios de software. Ele utiliza os modelos Gemini do Google para avaliar bases de código sob a perspectiva de múltiplos agentes de IA especializados, fornecendo feedback abrangente, pontuação e insights acionáveis.
+O **Hexa** é uma ferramenta avançada baseada em IA projetada para analisar repositórios de software. Ele utiliza os modelos Gemini do Google para avaliar bases de código sob a perspectiva de múltiplos agentes de IA especializados, fornecendo feedback abrangente, pontuação e insights acionáveis.
 
 [Read in English](./README.md)
 

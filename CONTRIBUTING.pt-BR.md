@@ -1,4 +1,4 @@
-# Contribuindo para o Avaliador ADK CodeCrew
+# Contribuindo para o Hexa
 
 Primeiramente, obrigado por dedicar seu tempo para contribuir!
 
